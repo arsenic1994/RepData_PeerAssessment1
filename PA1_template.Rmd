@@ -2,12 +2,11 @@
 title: "Reproducible Research: Peer Assessment 1"
 author: "Avinash Sinha"
 date: "24 June 2020"
-output: html_document
----
+output: 
+  html_document:
+    keep_md: true
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+---
 
 ## Loading and preprocessing the data
 
