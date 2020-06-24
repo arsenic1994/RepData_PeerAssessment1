@@ -1,25 +1,137 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+author: "Avinash Sinha"
+date: "24 June 2020"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ## Loading and preprocessing the data
 
+```{r}
+stepdata <- read.csv("C:/Users/Avinash.Sinha/Documents/R/Testing/Reproduciable reserch/activity.csv", 
+                     header = TRUE)
+head(stepdata)
+```
 
+## 1. Calculate total number of steps taken each day
 
-## What is mean total number of steps taken per day?
+```{r}
+library(magrittr)
+library(dplyr)
+databydate <- stepdata %>% select(date, steps) %>% group_by(date) %>% 
+  summarize(tsteps= sum(steps)) %>%na.omit()
+head(databydate)
+```
+## 2. Histogram of the total number of steps taken each day
+```{r}
+hist(databydate$tsteps, xlab = "Total daily Steps",main="Histogram of Total Steps by day", 
+     breaks = 20,col = "blue")
+```
 
+## 3. Calculate and report the mean and median of the total number of steps taken per day
 
+```{r}
+mean(databydate$tsteps)
+median(databydate$tsteps)
+```
 
-## What is the average daily activity pattern?
+## 4. Time series plot
 
+```{r}
+library(ggplot2)
+databyinterval <- stepdata%>% select(interval, steps) %>% na.omit() %>% 
+  group_by(interval) %>% summarize(tsteps= mean(steps)) 
+ggplot(databyinterval, aes(x=interval, y=tsteps))+ geom_line(col="Red")
+```
 
+## 5.The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r}
+databyinterval[which(databyinterval$tsteps== max(databyinterval$tsteps)),]
+```
 
 ## Imputing missing values
 
+# 1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
 
+```{r}
+missingVals <- sum(is.na(stepdata$steps))
+missingVals
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+# 2.Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+## My strategy ----> I will use the mean for that 5 -minute interval to replace all the missing values in the dataset. At the end, I will check if all the NAs have been 
+
+```{r}
+library(magrittr)
+library(dplyr)
+
+replacewithmean <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
+meandata <- stepdata%>% group_by(interval) %>% mutate(steps= replacewithmean(steps))
+head(meandata)
+```
+
+# 3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+## Dataset created with name -> meandata
+
+```{r}
+head(meandata)
+```
+# 4 Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.
+
+```{r}
+FullSummedDataByDay <- aggregate(meandata$steps, by=list(meandata$date), sum)
+
+names(FullSummedDataByDay)[1] ="date"
+names(FullSummedDataByDay)[2] ="totalsteps"
+head(FullSummedDataByDay,15)
+
+summary(FullSummedDataByDay)
+
+hist(FullSummedDataByDay$totalsteps, xlab = "Steps", ylab = "Frequency", main = "Total Daily Steps", 
+     breaks = 20,col="Red")
+```
+
+# Summary showing mean and median total number of steps taken per day
+
+```{r}
+summary(FullSummedDataByDay)
+```
+
+# Comparing the mean and median of Old and New data
+
+```{r}
+oldmean <- mean(databydate$tsteps, na.rm = TRUE)
+newmean <- mean(FullSummedDataByDay$totalsteps)
+
+oldmean
+newmean
+
+oldmedian <- median(databydate$tsteps, na.rm = TRUE)
+newmedian <- median(FullSummedDataByDay$totalsteps)
+
+oldmedian
+newmedian
+```
+
+# Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+meandata$date <- as.Date(meandata$date)
+meandata$weekday <- weekdays(meandata$date)
+meandata$weekend <- ifelse(meandata$weekday=="Saturday" | meandata$weekday=="Sunday", "Weekend", "Weekday" )
+
+meandataweekendweekday <- aggregate(meandata$steps , by= list(meandata$weekend, meandata$interval), na.omit(mean))
+names(meandataweekendweekday) <- c("weekend", "interval", "steps")
+
+ggplot(meandataweekendweekday, aes(x=interval, y=steps, color=weekend)) + geom_line()+
+  facet_grid(weekend ~.) + xlab("Interval") + ylab("Mean of Steps") +
+  ggtitle("Comparison of Average Number of Steps in Each Interval")
+```
+
+## Thus it can be inferred from the graph that there are more steps taken in weekend as compared to weekdays 
